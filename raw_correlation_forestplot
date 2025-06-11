@@ -1,0 +1,86 @@
+# forest_plot_generator.py
+
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from scipy.stats import norm
+import forestplot as fp
+
+# ========== CONFIGURATION ==========
+# Replace with relative or environment-based path
+FILE_PATH = "./correlation_MA_input.xlsx"
+SHEET_NAME = "raw_correlation"
+OUTPUT_FILE = "forestplot_highres_ord.png"
+
+# Optional: Define colors for different health status categories
+# Example: health_colors = {"Healthy": "green", "Unhealthy": "red"}
+health_colors = None  # Replace with actual dictionary
+
+# ========== STEP 1: Data Loading ==========
+
+df = pd.read_excel(FILE_PATH, sheet_name=SHEET_NAME)
+
+# Estimate 95% confidence intervals from correlation and p-values
+df["z"] = df["p value"].apply(lambda p: abs(norm.ppf(p / 2)))
+df["se"] = abs(df["cor"] / df["z"])
+df["ll"] = df["cor"] - 1.96 * df["se"]
+df["hl"] = df["cor"] + 1.96 * df["se"]
+
+# Add necessary columns for forestplot
+df["label"] = df["Output"]
+df["group"] = df["Health_status"]
+df["var"] = df["Diet element"]
+
+# Sort for display
+sorted_df = df.sort_values(by=["group", "var"]).reset_index(drop=True)
+
+# ========== STEP 2: Plot Settings ==========
+
+mpl.rcParams["figure.subplot.left"] = 0.08
+
+# ========== STEP 3: Create Forest Plot ==========
+
+ax = fp.forestplot(
+    dataframe=sorted_df,
+    estimate="cor",
+    ll="ll",
+    hl="hl",
+    varlabel="label",
+    groupvar="group",
+    table=True,
+    model_col="model_col",  # This column should be defined in your dataframe
+    mcolor=health_colors,
+    rightannote=["var", "study_id"],
+    right_annoteheaders=["Diet element", "Study"],
+    xlabel="Correlation (95% CI)",
+    figsize=(20, len(sorted_df) * 0.6),
+    **{
+        "markersize": 30,
+        "offset": 0.3,
+        "xlinestyle": (0, (6, 4)),
+        "xlinecolor": "gray",
+        "plot_gap": -0.8,
+        "table_gap": 0.01,
+        "varlabel_fontsize": 14,
+        "annoteheaders_fontsize": 13,
+        "annote_fontsize": 12,
+        "group_fontsize": 14,
+    },
+)
+
+# ========== STEP 4: Final Styling and Save ==========
+
+ax.set_xlabel("Correlation (95% CI)", fontsize=14)
+ax.tick_params(axis='x', labelsize=12)
+ax.tick_params(axis='y', labelsize=12)
+
+if ax.get_legend() is not None:
+    ax.get_legend().prop.set_size(12)
+    ax.get_legend().set_title("Health Status", prop={"size": 13})
+
+plt.tight_layout()
+plt.subplots_adjust(top=0.4)
+plt.savefig(OUTPUT_FILE, dpi=300, bbox_inches="tight")
+print("Plot saved to:", os.path.abspath(OUTPUT_FILE))
