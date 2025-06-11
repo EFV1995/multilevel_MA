@@ -1,3 +1,12 @@
+# ====================================================
+# Forest Plot of Correlations Between Maternal Diet and Maternal Gut Microbiota
+# Author: Eduard Flores
+# Date: 2025-05-13
+# Description: This script generates a forest plot to visualize
+#              correlation estimates and 95% confidence intervals
+#              between maternal diet elements and microbiota outcomes.
+# ====================================================
+
 # forest_plot_generator.py
 
 import os
